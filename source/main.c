@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 {
 	char *address, *prog_name = argv[0];
 	int network_socket;
-	int conversion_status;
+	int conversion_status, numbytes;
 	struct sockaddr_in server_address;
 	char request[] = "SSH-2.0-OpenSSH_7.1\r\n";
 	char server_response[4096];
@@ -64,15 +64,14 @@ int main(int argc, char *argv[])
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	if (recv(network_socket, &server_response, 
-					sizeof(server_response), 0) == -1) {
+	if ((numbytes = recv(network_socket, &server_response, 
+					sizeof(server_response), 0)) == -1) {
 		fprintf(stderr, "%s: cannot receive data: %s",
 						 prog_name, strerror(errno));
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
-	if (recv(network_socket, &server_response, 
-					sizeof(server_response), 0) == 0) {
+	if (numbytes == 0) {
 		fprintf(stderr, "%s: the server has closed the connection",
 								 prog_name);
 		close(network_socket);
