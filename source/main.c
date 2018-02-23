@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	if ((numbytes = recv(network_socket, &server_response, 
+	if ((numbytes = recv(network_socket, server_response, 
 					sizeof(server_response), 0)) == -1) {
 		fprintf(stderr, "%s: cannot receive data: %s",
 						 prog_name, strerror(errno));
