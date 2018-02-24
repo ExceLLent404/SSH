@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #define SSH_PORT 20
+#define MAX_BUF_SIZE 100
 
 int main(int argc, char *argv[])
 {
@@ -17,7 +18,7 @@ int main(int argc, char *argv[])
 	int conversion_status, numbytes;
 	struct sockaddr_in server_address;
 	char request[] = "SSH-2.0-OpenSSH_7.1\r\n";
-	char server_response[4096];
+	char server_response[MAX_BUF_SIZE];
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s <IPv4 address>\n", prog_name);
@@ -58,14 +59,14 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (send(network_socket, request, sizeof(request), 0) == -1) {
+	if (send(network_socket, request, strlen(request), 0) == -1) {
 		fprintf(stderr, "%s: cannot send data: %s",
 						 prog_name, strerror(errno));
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
 	if ((numbytes = recv(network_socket, server_response, 
-					sizeof(server_response), 0)) == -1) {
+						MAX_BUF_SIZE - 1, 0)) == -1) {
 		fprintf(stderr, "%s: cannot receive data: %s",
 						 prog_name, strerror(errno));
 		close(network_socket);
@@ -77,6 +78,7 @@ int main(int argc, char *argv[])
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
+	server_response[numbytes] = '\0';
 	printf("The server sent the data:\n%s", server_response);
 
 	shutdown(network_socket, SHUT_RDWR);
