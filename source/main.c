@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define SSH_PORT 20
+#define SSH_PORT 22
 #define MAX_BUF_SIZE 100
 
 int main(int argc, char *argv[])
