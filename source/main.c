@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #define SSH_PORT 22
-#define MAX_BUF_SIZE 100
+#define MAX_BUF_SIZE 1024
 
 /* Returns a new socket descriptor */
 int initialize_connection(char *address, char *prog_name)
