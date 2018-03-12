@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #define SSH_PORT 22
-#define MAX_BUF_SIZE 1024
 
 /* Returns a new socket descriptor */
 int initialize_connection(char *address, char *prog_name)
@@ -54,6 +53,8 @@ int initialize_connection(char *address, char *prog_name)
 
 	return network_socket;
 }
+
+#define MAX_BUF_SIZE 1024
 
 void protocol_version_exchange(int network_socket, char *prog_name)
 {
@@ -141,6 +142,108 @@ void wrap_message(uint8_t *data_packet, size_t packet_size,
 	*/
 }
 
+#define NAME_LIST_SIZE 10
+#define COOKIE_SIZE 16
+
+size_t get_kexinit_msg_size(char *name_list[NAME_LIST_SIZE])
+{
+	int i;
+	size_t size;
+
+	size = sizeof(uint8_t) + COOKIE_SIZE + 
+					NAME_LIST_SIZE * sizeof(uint32_t);
+	for (i = 0; i < NAME_LIST_SIZE; ++i)
+		size += strlen(name_list[i]);
+	size += sizeof(uint8_t) + sizeof(uint32_t);
+
+	return size;
+}
+
+#define SSH_MSG_KEXINIT 20
+#define FALSE 0
+#define TRUE 1
+
+void set_kexinit_msg(uint8_t *data, char *name_list[NAME_LIST_SIZE])
+{
+	int i, j, length, shift;	
+	uint8_t cookie[COOKIE_SIZE];
+
+	set_random_bytes(cookie, COOKIE_SIZE);
+
+	shift = 0;
+	data[shift++] = SSH_MSG_KEXINIT;
+	for (i = 0; i < COOKIE_SIZE; ++i)
+		data[i + shift] = cookie[i];
+	shift += COOKIE_SIZE;
+	for (i = 0; i < NAME_LIST_SIZE; ++i) {
+		length = strlen(name_list[i]);
+		*(uint32_t *) (data + shift) = htonl(length);
+		shift += sizeof(uint32_t);
+		for (j = 0; j < length; ++j)
+			data[shift + j] = ((uint8_t *) name_list[i])[j];
+		shift += length;
+	}
+	data[shift++] = FALSE;
+	*(uint32_t *) (data + shift) = 0;
+}
+
+/* Algoritm Negotiation: the SSH_MSG_KEXINIT message exchange */
+void negotiate_algorithm(int network_socket, char *prog_name)
+{
+	int i, numbytes, shift;
+	uint8_t server_response[MAX_BUF_SIZE];
+	char *name_list[NAME_LIST_SIZE] = {
+		"diffie-hellman-group14-sha1",
+		"ssh-rsa",
+		"chacha20-poly1305@openssh.com",
+		"chacha20-poly1305@openssh.com",
+		"hmac-sha1",
+		"hmac-sha1",
+		"none",
+		"none",
+		"",
+		""
+	};
+	size_t msg_size = get_kexinit_msg_size(name_list);
+	size_t packet_size = get_packet_size(msg_size, 0, 0);
+	uint8_t *data_packet = (uint8_t *) calloc(packet_size, 
+							sizeof(uint8_t));
+
+	shift = sizeof(uint32_t) + sizeof(uint8_t);
+	set_kexinit_msg(data_packet + shift, name_list);
+	wrap_message(data_packet, packet_size, msg_size, 0);
+	
+	printf("Expecting the SSH_MSG_KEXINIT message from the server\n");
+	if ((numbytes = recv(network_socket, server_response, 
+						MAX_BUF_SIZE, 0)) == -1) {
+		fprintf(stderr, "%s: cannot receive the SSH_MSG_KEXINIT"
+				" message: %s", prog_name, strerror(errno));
+		free(data_packet);
+		close(network_socket);
+		exit(EXIT_FAILURE);
+	}
+	if (numbytes == 0) {
+		fprintf(stderr, "%s: the server has closed the connection",
+								 prog_name);
+		free(data_packet);
+		close(network_socket);
+		exit(EXIT_FAILURE);
+	}
+	printf("The SSH_MSG_KEXINIT message is received\n");
+
+	printf("Sending the SSH_MSG_KEXINIT message to server\n");
+	if (send(network_socket, data_packet, packet_size, 0) == -1) {
+		fprintf(stderr, "%s: cannot send the SSH_MSG_KEXINIT "
+				"message: %s", prog_name, strerror(errno));
+		free(data_packet);
+		close(network_socket);
+		exit(EXIT_FAILURE);		
+	}
+	printf("The SSH_MSG_KEXINIT message is sent\n");
+ 
+	free(data_packet);
+}
+
 int main(int argc, char *argv[])
 {
 	char *address, *prog_name = argv[0];
@@ -156,6 +259,7 @@ int main(int argc, char *argv[])
 	network_socket = initialize_connection(address, prog_name);
 
 	protocol_version_exchange(network_socket, prog_name);
+	negotiate_algorithm(network_socket, prog_name);
 
 	shutdown(network_socket, SHUT_RDWR);
 	close(network_socket);
