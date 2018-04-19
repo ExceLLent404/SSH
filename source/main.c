@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "../include/sha1.h"
 
 #define SSH_PORT 22
 
