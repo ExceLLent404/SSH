@@ -109,7 +109,7 @@ void set_random_bytes(uint8_t *destination, int numbytes)
 size_t get_packet_size(size_t payload_size, size_t cipher_block_size, 
 								int mac_length)
 {
-	int i, piece_size = (cipher_block_size > 8) ? cipher_block_size : 8;
+	int piece_size = (cipher_block_size > 8) ? cipher_block_size : 8;
 	size_t packet_size, padding_length = 4;
 
 	packet_size = sizeof(uint32_t) + sizeof(uint8_t) + payload_size;
@@ -191,7 +191,7 @@ void set_kexinit_msg(uint8_t *data, char *name_list[NAME_LIST_SIZE])
 /* Algoritm Negotiation: the SSH_MSG_KEXINIT message exchange */
 void negotiate_algorithm(int network_socket, char *prog_name)
 {
-	int i, numbytes, shift;
+	int numbytes, shift;
 	uint8_t server_response[MAX_BUF_SIZE];
 	char *name_list[NAME_LIST_SIZE] = {
 		"diffie-hellman-group14-sha1",
