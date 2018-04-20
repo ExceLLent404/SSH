@@ -62,7 +62,7 @@ int initialize_connection(char *address)
 
 #define MAX_BUF_SIZE 1024
 
-void protocol_version_exchange(int network_socket)
+void exchange_protocol_versions(int network_socket)
 {
 	char identification_string[] = "SSH-2.0-OpenSSH_7.1\r\n";
 	char server_response[MAX_BUF_SIZE];
@@ -191,7 +191,7 @@ void set_kexinit_msg(uint8_t *data, char *name_list[NAME_LIST_SIZE])
 }
 
 /* Algoritm Negotiation: the SSH_MSG_KEXINIT message exchange */
-void negotiate_algorithm(int network_socket)
+void negotiate_algorithms(int network_socket)
 {
 	int numbytes, shift;
 	uint8_t server_response[MAX_BUF_SIZE];
@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
 
 	network_socket = initialize_connection(address);
 
-	protocol_version_exchange(network_socket);
-	negotiate_algorithm(network_socket);
+	exchange_protocol_versions(network_socket);
+	negotiate_algorithms(network_socket);
 
 	shutdown(network_socket, SHUT_RDWR);
 	close(network_socket);
