@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 	prog_name = argv[0];
 
 	if (argc < 2) {
-		print_error("Usage: %s <IPv4 address>\n");
+		fprintf(stderr, "Usage: %s <IPv4 address>\n", prog_name);
 		exit(EXIT_FAILURE);
 	}
 
