@@ -1,3 +1,8 @@
+/*
+ * This file implements the Secure Shell (SSH) Transport Layer
+ * protocol as defined in RFC 4253 published January 2006.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -108,6 +113,10 @@ void set_random_bytes(uint8_t *destination, int numbytes)
 		destination[j + i * step_size] = ptr[j];
 }
 
+/*
+ * The function calculates the packet size, which is formatted
+ * according to the binary packet protocol.
+ */
 size_t get_packet_size(size_t payload_size, size_t cipher_block_size, 
 								int mac_length)
 {
@@ -123,6 +132,13 @@ size_t get_packet_size(size_t payload_size, size_t cipher_block_size,
 	return packet_size;
 }
 
+/*
+ * The function wrap a message to a packet, which is formatted
+ * according to the binary packet protocol.
+ *
+ * The message must be set by calling one of the set_msg functions
+ * before invoking this function.
+ */
 void wrap_message(uint8_t *data_packet, size_t packet_size, 
 					size_t payload_size, int mac_length)
 {
