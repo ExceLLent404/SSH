@@ -33,9 +33,8 @@
 #define DH_G 2
 
 /*
- * The multiple precision integers x, e, f, and K is less than p.
- * So their size is equal to 256 bytes (2048 bits - Oakley Group
- * 14 size).
+ * The size of multiple precision integers in bytes (Oakley Group 14
+ * size).
  */
 #define DH_MPINT_SIZE 256
 
