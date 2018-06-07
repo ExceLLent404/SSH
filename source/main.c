@@ -69,7 +69,7 @@ int initialize_connection(char *address)
 
 void exchange_protocol_versions(int network_socket)
 {
-	char identification_string[] = "SSH-2.0-OpenSSH_7.1\r\n";
+	char identification_string[] = "SSH-2.0-EDU\r\n";
 	char server_response[MAX_BUF_SIZE];
 	int numbytes;
 
