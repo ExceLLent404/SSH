@@ -5,6 +5,7 @@
 
 void DH_generate_x(uint8_t x_byte[DH_MPINT_SIZE])
 {
+	int i, shift;
 	mpz_t x, q;
 	gmp_randstate_t state;
 
@@ -21,7 +22,16 @@ void DH_generate_x(uint8_t x_byte[DH_MPINT_SIZE])
 	/* generate x: x < q */
 	mpz_urandomb(x, state, DH_MPINT_SIZE * 8 - 1);
 
-	mpz_export(x_byte, NULL, 1, sizeof(uint8_t), -1, 0, x);
+	/*
+	 * The size of the number x can be less than the size of the
+	 * allocated memory, i.e. DH_MPINT_SIZE. Calculate how many
+	 * bytes to skip before exporting the number, and set
+	 * these bytes to 0x00's.
+	 */
+	shift = DH_MPINT_SIZE - (mpz_sizeinbase(x, 2) + 7) / 8;
+	for (i = 0; i < shift; ++i)
+		x_byte[i] = 0x00;
+	mpz_export(x_byte + shift, NULL, 1, sizeof(uint8_t), -1, 0, x);
 	
 	mpz_clear(x);
 	mpz_clear(q);
@@ -30,6 +40,7 @@ void DH_generate_x(uint8_t x_byte[DH_MPINT_SIZE])
 
 void DH_compute_e(uint8_t e_byte[DH_MPINT_SIZE], uint8_t x_byte[DH_MPINT_SIZE])
 {
+	int i, shift;
 	mpz_t e, g, x, p;
 	
 	mpz_init(e);
@@ -41,8 +52,17 @@ void DH_compute_e(uint8_t e_byte[DH_MPINT_SIZE], uint8_t x_byte[DH_MPINT_SIZE])
 
 	mpz_powm(e, g, x, p);
 
-	mpz_export(e_byte, NULL, 1, sizeof(uint8_t), -1, 0, e);
-
+	/*
+	 * The size of the number e can be less than the size of the
+	 * allocated memory, i.e. DH_MPINT_SIZE. Calculate how many
+	 * bytes to skip before exporting the number, and set
+	 * these bytes to 0x00's.
+	 */
+	shift = DH_MPINT_SIZE - (mpz_sizeinbase(e, 2) + 7) / 8;
+	for (i = 0; i < shift; ++i)
+		e_byte[i] = 0x00;
+	mpz_export(e_byte + shift, NULL, 1, sizeof(uint8_t), -1, 0, e);
+	
 	mpz_clear(e);
 	mpz_clear(g);
 	mpz_clear(x);
@@ -52,6 +72,7 @@ void DH_compute_e(uint8_t e_byte[DH_MPINT_SIZE], uint8_t x_byte[DH_MPINT_SIZE])
 void DH_compute_K(uint8_t K_byte[DH_MPINT_SIZE], uint8_t f_byte[DH_MPINT_SIZE],
 						uint8_t x_byte[DH_MPINT_SIZE])
 {
+	int i, shift;
 	mpz_t K, f, x, p;
 	
 	mpz_init(K);
@@ -64,8 +85,17 @@ void DH_compute_K(uint8_t K_byte[DH_MPINT_SIZE], uint8_t f_byte[DH_MPINT_SIZE],
 
 	mpz_powm(K, f, x, p);
 
-	mpz_export(K_byte, NULL, 1, sizeof(uint8_t), -1, 0, K);
-
+	/*
+	 * The size of the number K can be less than the size of the
+	 * allocated memory, i.e. DH_MPINT_SIZE. Calculate how many
+	 * bytes to skip before exporting the number, and set
+	 * these bytes to 0x00's.
+	 */
+	shift = DH_MPINT_SIZE - (mpz_sizeinbase(K, 2) + 7) / 8;
+	for (i = 0; i < shift; ++i)
+		K_byte[i] = 0x00;
+	mpz_export(K_byte + shift, NULL, 1, sizeof(uint8_t), -1, 0, K);
+	
 	mpz_clear(K);
 	mpz_clear(f);
 	mpz_clear(x);
