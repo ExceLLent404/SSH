@@ -262,17 +262,10 @@ void negotiate_algorithms(int network_socket)
 
 int main(int argc, char *argv[])
 {
-	char *address;
+	char *address = "205.166.94.15";
 	int network_socket;
 
 	prog_name = argv[0];
-
-	if (argc < 2) {
-		fprintf(stderr, "Usage: %s <IPv4 address>\n", prog_name);
-		exit(EXIT_FAILURE);
-	}
-
-	address = argv[1];
 
 	network_socket = initialize_connection(address);
 
