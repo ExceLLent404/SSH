@@ -554,6 +554,44 @@ void derive_keys()
 	SHA1Result(&sha, integrity_k_stoc);
 }
 
+#define SSH_MSG_NEWKEYS 21
+
+void affirm_keys(int network_socket)
+{
+	int numbytes, shift;
+	uint8_t server_response[MAX_BUF_SIZE];
+	size_t msg_size = sizeof(uint8_t);
+	size_t packet_size = get_packet_size(msg_size, 0, 0);
+	uint8_t *data_packet = (uint8_t *) calloc(packet_size, 
+							sizeof(uint8_t));
+
+	shift = sizeof(uint32_t) + sizeof(uint8_t);
+	*(data_packet + shift) = SSH_MSG_NEWKEYS;
+	wrap_message(data_packet, packet_size, msg_size, 0);
+
+	printf("Expecting the SSH_MSG_NEWKEYS message from the server\n");
+	if ((numbytes = recv(network_socket, server_response, 
+						MAX_BUF_SIZE, 0)) == -1) {
+		print_error("cannot receive the SSH_MSG_NEWKEYS message");
+		close(network_socket);
+		exit(EXIT_FAILURE);
+	}
+	if (numbytes == 0) {
+		print_error("the server has closed the connection");
+		close(network_socket);
+		exit(EXIT_FAILURE);
+	}
+	printf("The SSH_MSG_NEWKEYS message is received\n");
+
+	printf("Sending the SSH_MSG_NEWKEYS message to server\n");
+	if (send(network_socket, data_packet, packet_size, 0) == -1) {
+		print_error("cannot send the identification string");
+		close(network_socket);
+		exit(EXIT_FAILURE);		
+	}
+	printf("The SSH_MSG_NEWKEYS message is sent\n");
+}
+
 int main(int argc, char *argv[])
 {
 	char *address = "205.166.94.15";
@@ -572,6 +610,7 @@ int main(int argc, char *argv[])
 	pre_hash_size = 0;
 	memcpy(session_id, H, SHA1HashSize);
 	derive_keys();
+	affirm_keys(network_socket);
 
 	shutdown(network_socket, SHUT_RDWR);
 	close(network_socket);
