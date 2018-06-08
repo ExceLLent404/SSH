@@ -31,6 +31,10 @@ uint8_t *pre_hash;
 size_t pre_hash_size;
 uint8_t K[DH_MPINT_SIZE];	/* a shared secret  */
 uint8_t H[SHA1HashSize];	/* an exchange hash */
+uint8_t session_id[SHA1HashSize];
+uint8_t IV_ctos[SHA1HashSize], IV_stoc[SHA1HashSize];
+uint8_t encryption_k_ctos[SHA1HashSize], encryption_k_stoc[SHA1HashSize];
+uint8_t integrity_k_ctos[SHA1HashSize], integrity_k_stoc[SHA1HashSize];
 
 void print_error(const char *str)
 {
@@ -48,6 +52,7 @@ void print_error(const char *str)
  * The function will append data to pre_hash storage. It takes into
  * account data type.
  */
+
 void append(uint8_t *data, uint32_t length, int data_type)
 {
 	size_t tail_size = 0;
@@ -500,6 +505,55 @@ void exchange_keys(int network_socket)
 	free(data_packet);
 }
 
+void derive_keys()
+{
+	SHA1Context sha;
+	char letter = 'A';
+	int shift;
+
+	append(K, sizeof(K), MPINT_T);
+	append(H, sizeof(H), RAW_T);
+	append((uint8_t *) &letter, sizeof(letter), RAW_T);
+	append(session_id, sizeof(session_id), RAW_T);
+
+	shift = pre_hash_size - sizeof(session_id) - sizeof(letter);
+
+	/* derive IV_ctos */
+	SHA1Reset(&sha);
+	SHA1Input(&sha, pre_hash, pre_hash_size);
+	SHA1Result(&sha, IV_ctos);
+
+	/* derive IV_stoc */
+	(*(pre_hash + shift))++;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, pre_hash, pre_hash_size);
+	SHA1Result(&sha, IV_stoc);
+
+	/* derive encryption_k_ctos */
+	(*(pre_hash + shift))++;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, pre_hash, pre_hash_size);
+	SHA1Result(&sha, encryption_k_ctos);
+
+	/* derive encryption_k_stoc */
+	(*(pre_hash + shift))++;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, pre_hash, pre_hash_size);
+	SHA1Result(&sha, encryption_k_stoc);
+
+	/* derive integrity_k_ctos */
+	(*(pre_hash + shift))++;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, pre_hash, pre_hash_size);
+	SHA1Result(&sha, integrity_k_ctos);
+
+	/* derive integrity_k_stoc */
+	(*(pre_hash + shift))++;
+	SHA1Reset(&sha);
+	SHA1Input(&sha, pre_hash, pre_hash_size);
+	SHA1Result(&sha, integrity_k_stoc);
+}
+
 int main(int argc, char *argv[])
 {
 	char *address = "205.166.94.15";
@@ -513,6 +567,11 @@ int main(int argc, char *argv[])
 	exchange_protocol_versions(network_socket);
 	negotiate_algorithms(network_socket);
 	exchange_keys(network_socket);
+
+	pre_hash = (uint8_t *) realloc(pre_hash, 0);
+	pre_hash_size = 0;
+	memcpy(session_id, H, SHA1HashSize);
+	derive_keys();
 
 	shutdown(network_socket, SHUT_RDWR);
 	close(network_socket);
