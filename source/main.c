@@ -125,6 +125,7 @@ int initialize_connection(char *address)
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
+	printf("Connection established\n\n");
 
 	return network_socket;
 }
@@ -140,7 +141,8 @@ void exchange_protocol_versions(int network_socket)
 	append((uint8_t *) identification_string,
 				strlen(identification_string) - 2, STRING_T);
 
-	printf("Sending the identification string: %s", identification_string);
+	printf("    Client identification string: %s", identification_string);
+	printf("------------------------------------------------>\n\n");
 	if (send(network_socket, identification_string, 
 				strlen(identification_string), 0) == -1) {
 		print_error("cannot send the identification string");
@@ -160,7 +162,8 @@ void exchange_protocol_versions(int network_socket)
 		exit(EXIT_FAILURE);
 	}
 	server_response[numbytes] = '\0';
-	printf("The server sent the data:\n%s", server_response);
+	printf("Server identification string: %s", server_response);
+	printf("<------------------------------------------------\n\n");
 
 	append((uint8_t *) server_response, numbytes - 2, STRING_T);
 }
@@ -305,7 +308,6 @@ void negotiate_algorithms(int network_socket)
 
 	append(data_packet + shift, msg_size, STRING_T);
 	
-	printf("Expecting the SSH_MSG_KEXINIT message from the server\n");
 	if ((numbytes = recv(network_socket, server_response, 
 						MAX_BUF_SIZE, 0)) == -1) {
 		print_error("cannot receive the SSH_MSG_KEXINIT message");
@@ -319,21 +321,22 @@ void negotiate_algorithms(int network_socket)
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
-	printf("The SSH_MSG_KEXINIT message is received\n");
+	printf("   Server: ssh-rsa, diffie-hellman-group14-sha1\n");
+	printf("<------------------------------------------------\n\n");
 
 	length = ntohl(*(uint32_t *) (server_response))
 			 - server_response[sizeof(uint32_t)] - sizeof(uint8_t);
 	shift = sizeof(uint32_t) + sizeof(uint8_t);
 	append(server_response + shift, length, STRING_T);
 
-	printf("Sending the SSH_MSG_KEXINIT message to server\n");
 	if (send(network_socket, data_packet, packet_size, 0) == -1) {
 		print_error("cannot send the SSH_MSG_KEXINIT message");
 		free(data_packet);
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	printf("The SSH_MSG_KEXINIT message is sent\n");
+	printf("   Client: ssh-rsa, diffie-hellman-group14-sha1\n");
+	printf("------------------------------------------------>\n\n");
  
 	free(data_packet);
 }
@@ -403,16 +406,15 @@ void exchange_keys(int network_socket)
 	set_kexdh_init_msg(data_packet + shift, DH_e);
 	wrap_message(data_packet, packet_size, msg_size, 0);
 	
-	printf("Sending the SSH_MSG_KEXDH_INIT message to server\n");
 	if (send(network_socket, data_packet, packet_size, 0) == -1) {
 		print_error("cannot send the SSH_MSG_KEXDH_INIT message");
 		free(data_packet);
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	printf("The SSH_MSG_KEXDH_INIT message is sent\n");
+	printf("\t\t    Client: e\n");
+	printf("------------------------------------------------>\n\n");
 
-	printf("Expecting the SSH_MSG_KEXDH_REPLY message from the server\n");
 	if ((numbytes = recv(network_socket, server_response,
 						 sizeof(length), 0)) == -1) {
 		print_error("cannot receive the SSH_MSG_KEXDH_REPLY message");
@@ -430,7 +432,8 @@ void exchange_keys(int network_socket)
 	shift = sizeof(length);
 	numbytes += recv(network_socket, server_response + shift, 
 							length, 0);
-	printf("The SSH_MSG_KEXDH_REPLY message is received\n");
+	printf("\t\tServer: k_pub, f, s\n");
+	printf("<-----------------------------------------------\n\n");
 	
 	/* extract K_S */
 	shift = sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint8_t);
@@ -442,7 +445,7 @@ void exchange_keys(int network_socket)
 	hash(server_response + shift, length, fingerprint);
 	for (i = 0; i < SHA1_HASH_SIZE - 1; ++i)
 		printf("%02x:", fingerprint[i]);
-	printf("%02x\n", fingerprint[i]);
+	printf("%02x\n\n", fingerprint[i]);
 
 	/* extract (e, n) */
 	length = ntohl(*(uint32_t *) (server_response + shift));
@@ -493,9 +496,9 @@ void exchange_keys(int network_socket)
 	printf("Verifying the signature: ");
 	hash(pre_hash, pre_hash_size, H);
 	if (RSA_verify(H, sizeof(H), RSA_s, RSA_e, RSA_n))
-		printf("invalid\n");
+		printf("invalid\n\n");
 	else
-		printf("valid\n");
+		printf("valid\n\n");
 
 	free(data_packet);
 }
@@ -551,7 +554,6 @@ void affirm_keys(int network_socket)
 	*(data_packet + shift) = SSH_MSG_NEWKEYS;
 	wrap_message(data_packet, packet_size, msg_size, 0);
 
-	printf("Expecting the SSH_MSG_NEWKEYS message from the server\n");
 	if ((numbytes = recv(network_socket, server_response, 
 						MAX_BUF_SIZE, 0)) == -1) {
 		print_error("cannot receive the SSH_MSG_NEWKEYS message");
@@ -563,15 +565,16 @@ void affirm_keys(int network_socket)
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
-	printf("The SSH_MSG_NEWKEYS message is received\n");
+	printf("\t\tServer: \"accept keys\"\n");
+	printf("<-----------------------------------------------\n\n");
 
-	printf("Sending the SSH_MSG_NEWKEYS message to server\n");
 	if (send(network_socket, data_packet, packet_size, 0) == -1) {
 		print_error("cannot send the identification string");
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	printf("The SSH_MSG_NEWKEYS message is sent\n");
+	printf("\t\tClient: \"accept keys\"\n");
+	printf("----------------------------------------------->\n\n");
 }
 
 int main(int argc, char *argv[])
