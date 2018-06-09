@@ -180,7 +180,8 @@ void set_random_bytes(uint8_t *destination, int numbytes)
 		random_value = rand();
 		*(uint32_t *) (destination + i * step_size) = random_value;
 	}
-	if (remainder = numbytes % sizeof(uint32_t))
+	remainder = numbytes % sizeof(uint32_t);
+	if (remainder)
 		random_value = rand();
 	for (j = 0; j < remainder; ++j)
 		destination[j + i * step_size] = ptr[j];
