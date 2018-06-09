@@ -9,27 +9,24 @@
 static void encode(uint8_t *EM, size_t emLen, uint8_t *M, size_t mLen)
 {
 	int i, shift = 0;
-	SHA1Context sha;
-	uint8_t H[SHA1HashSize];
+	uint8_t H[SHA1_HASH_SIZE];
 	uint8_t algorithm_id[] = {
 		0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e,
 		0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14
 	};
 
-	SHA1Reset(&sha);
-	SHA1Input(&sha, M, mLen);
-	SHA1Result(&sha, H);
+	hash(M, mLen, H);
 
 	EM[shift++] = 0x00;
 	EM[shift++] = 0x01;
-	for (i = 0; i < emLen - sizeof(algorithm_id) - SHA1HashSize - 3; ++i)
+	for (i = 0; i < emLen - sizeof(algorithm_id) - SHA1_HASH_SIZE - 3; ++i)
 		EM[i + shift] = 0xff;
-	shift += emLen - sizeof(algorithm_id) - SHA1HashSize - 3;
+	shift += emLen - sizeof(algorithm_id) - SHA1_HASH_SIZE - 3;
 	EM[shift++] = 0x00;
 	for (i = 0; i < sizeof(algorithm_id); ++i)
 		EM[i + shift] = algorithm_id[i];
 	shift += sizeof(algorithm_id);
-	for (i = 0; i < SHA1HashSize; ++i)
+	for (i = 0; i < SHA1_HASH_SIZE; ++i)
 		EM[i + shift] = H[i];
 }
 

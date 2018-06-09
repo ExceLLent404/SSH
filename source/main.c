@@ -30,11 +30,11 @@ char *prog_name;
 uint8_t *pre_hash;
 size_t pre_hash_size;
 uint8_t K[DH_MPINT_SIZE];	/* a shared secret  */
-uint8_t H[SHA1HashSize];	/* an exchange hash */
-uint8_t session_id[SHA1HashSize];
-uint8_t IV_ctos[SHA1HashSize], IV_stoc[SHA1HashSize];
-uint8_t encryption_k_ctos[SHA1HashSize], encryption_k_stoc[SHA1HashSize];
-uint8_t integrity_k_ctos[SHA1HashSize], integrity_k_stoc[SHA1HashSize];
+uint8_t H[SHA1_HASH_SIZE];	/* an exchange hash */
+uint8_t session_id[SHA1_HASH_SIZE];
+uint8_t IV_ctos[SHA1_HASH_SIZE], IV_stoc[SHA1_HASH_SIZE];
+uint8_t encryption_k_ctos[SHA1_HASH_SIZE], encryption_k_stoc[SHA1_HASH_SIZE];
+uint8_t integrity_k_ctos[SHA1_HASH_SIZE], integrity_k_stoc[SHA1_HASH_SIZE];
 
 void print_error(const char *str)
 {
@@ -389,8 +389,7 @@ void exchange_keys(int network_socket)
 	uint8_t RSA_s[RSA_MPINT_SIZE], RSA_n[RSA_MPINT_SIZE],
 					 RSA_e[RSA_MPINT_SIZE] = {0};
 	uint32_t length;
-	SHA1Context sha;
-	uint8_t fingerprint[SHA1HashSize];
+	uint8_t fingerprint[SHA1_HASH_SIZE];
 
 	DH_generate_x(DH_x);
 	DH_compute_e(DH_e, DH_x);
@@ -440,10 +439,8 @@ void exchange_keys(int network_socket)
 	append(server_response + shift, length, STRING_T);
 
 	printf("Server public key fingerprint:\n\t");
-	SHA1Reset(&sha);
-	SHA1Input(&sha, server_response + shift, length);
-	SHA1Result(&sha, fingerprint);
-	for (i = 0; i < SHA1HashSize - 1; ++i)
+	hash(server_response + shift, length, fingerprint);
+	for (i = 0; i < SHA1_HASH_SIZE - 1; ++i)
 		printf("%02x:", fingerprint[i]);
 	printf("%02x\n", fingerprint[i]);
 
@@ -494,9 +491,7 @@ void exchange_keys(int network_socket)
 	append(K, sizeof(K), MPINT_T);
 
 	printf("Verifying the signature: ");
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, H);
+	hash(pre_hash, pre_hash_size, H);
 	if (RSA_verify(H, sizeof(H), RSA_s, RSA_e, RSA_n))
 		printf("invalid\n");
 	else
@@ -507,7 +502,6 @@ void exchange_keys(int network_socket)
 
 void derive_keys()
 {
-	SHA1Context sha;
 	char letter = 'A';
 	int shift;
 
@@ -519,39 +513,27 @@ void derive_keys()
 	shift = pre_hash_size - sizeof(session_id) - sizeof(letter);
 
 	/* derive IV_ctos */
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, IV_ctos);
+	hash(pre_hash, pre_hash_size, IV_ctos);
 
 	/* derive IV_stoc */
 	(*(pre_hash + shift))++;
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, IV_stoc);
+	hash(pre_hash, pre_hash_size, IV_stoc);
 
 	/* derive encryption_k_ctos */
 	(*(pre_hash + shift))++;
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, encryption_k_ctos);
+	hash(pre_hash, pre_hash_size, encryption_k_ctos);
 
 	/* derive encryption_k_stoc */
 	(*(pre_hash + shift))++;
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, encryption_k_stoc);
+	hash(pre_hash, pre_hash_size, encryption_k_stoc);
 
 	/* derive integrity_k_ctos */
 	(*(pre_hash + shift))++;
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, integrity_k_ctos);
+	hash(pre_hash, pre_hash_size, integrity_k_ctos);
 
 	/* derive integrity_k_stoc */
 	(*(pre_hash + shift))++;
-	SHA1Reset(&sha);
-	SHA1Input(&sha, pre_hash, pre_hash_size);
-	SHA1Result(&sha, integrity_k_stoc);
+	hash(pre_hash, pre_hash_size, integrity_k_stoc);
 }
 
 #define SSH_MSG_NEWKEYS 21
@@ -608,7 +590,7 @@ int main(int argc, char *argv[])
 
 	pre_hash = (uint8_t *) realloc(pre_hash, 0);
 	pre_hash_size = 0;
-	memcpy(session_id, H, SHA1HashSize);
+	memcpy(session_id, H, SHA1_HASH_SIZE);
 	derive_keys();
 	affirm_keys(network_socket);
 
