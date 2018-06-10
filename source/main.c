@@ -141,8 +141,7 @@ void exchange_protocol_versions(int network_socket)
 	append((uint8_t *) identification_string,
 				strlen(identification_string) - 2, STRING_T);
 
-	printf("    Client identification string: %s", identification_string);
-	printf("------------------------------------------------>\n\n");
+	printf("    Client identification string: SSH-2.0-EDU -------->\n\n");
 	if (send(network_socket, identification_string, 
 				strlen(identification_string), 0) == -1) {
 		print_error("cannot send the identification string");
@@ -162,8 +161,8 @@ void exchange_protocol_versions(int network_socket)
 		exit(EXIT_FAILURE);
 	}
 	server_response[numbytes] = '\0';
-	printf("Server identification string: %s", server_response);
-	printf("<------------------------------------------------\n\n");
+	printf("<-------- Server identification string: %s\n",
+							 server_response);
 
 	append((uint8_t *) server_response, numbytes - 2, STRING_T);
 }
@@ -322,8 +321,7 @@ void negotiate_algorithms(int network_socket)
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
-	printf("   Server: ssh-rsa, diffie-hellman-group14-sha1\n");
-	printf("<------------------------------------------------\n\n");
+	printf("  <-------- Server: ssh-rsa, diffie-hellman-group14-sha1\n\n");
 
 	length = ntohl(*(uint32_t *) (server_response))
 			 - server_response[sizeof(uint32_t)] - sizeof(uint8_t);
@@ -336,8 +334,7 @@ void negotiate_algorithms(int network_socket)
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	printf("   Client: ssh-rsa, diffie-hellman-group14-sha1\n");
-	printf("------------------------------------------------>\n\n");
+	printf("  Client: ssh-rsa, diffie-hellman-group14-sha1 -------->\n\n");
  
 	free(data_packet);
 }
@@ -413,8 +410,7 @@ void exchange_keys(int network_socket)
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	printf("\t\t    Client: e\n");
-	printf("------------------------------------------------>\n\n");
+	printf("\t\t    Client: e -------->\n\n");
 
 	if ((numbytes = recv(network_socket, server_response,
 						 sizeof(length), 0)) == -1) {
@@ -433,8 +429,7 @@ void exchange_keys(int network_socket)
 	shift = sizeof(length);
 	numbytes += recv(network_socket, server_response + shift, 
 							length, 0);
-	printf("\t\tServer: k_pub, f, s\n");
-	printf("<-----------------------------------------------\n\n");
+	printf("\t       <-------- Server: k_pub, f, s\n\n");
 	
 	/* extract K_S */
 	shift = sizeof(uint32_t) + sizeof(uint8_t) + sizeof(uint8_t);
@@ -442,7 +437,7 @@ void exchange_keys(int network_socket)
 	shift += sizeof(uint32_t);
 	append(server_response + shift, length, STRING_T);
 
-	printf("Server public key fingerprint:\n\t");
+	printf("Server public key fingerprint:\n");
 	hash(server_response + shift, length, fingerprint);
 	for (i = 0; i < SHA1_HASH_SIZE - 1; ++i)
 		printf("%02x:", fingerprint[i]);
@@ -566,16 +561,14 @@ void affirm_keys(int network_socket)
 		close(network_socket);
 		exit(EXIT_FAILURE);
 	}
-	printf("\t\tServer: \"accept keys\"\n");
-	printf("<-----------------------------------------------\n\n");
+	printf("\t      <-------- Server: \"accept keys\"\n\n");
 
 	if (send(network_socket, data_packet, packet_size, 0) == -1) {
 		print_error("cannot send the identification string");
 		close(network_socket);
 		exit(EXIT_FAILURE);		
 	}
-	printf("\t\tClient: \"accept keys\"\n");
-	printf("----------------------------------------------->\n\n");
+	printf("\t      Client: \"accept keys\" -------->\n");
 }
 
 int main(int argc, char *argv[])
